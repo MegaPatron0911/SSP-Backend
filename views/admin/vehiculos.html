@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Vehículos</title>
+ 
+  <link rel="stylesheet" href="css/estilo.css">
+  
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+  <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+  <script>
+    const allColumns = ['id', 'placa', 'color', 'modelo', 'marca', 'tipo', 'usuario_id_usuario'];
+    let columns = [...allColumns];
+    let data = [];
+    let dataTableInstance = null;
+
+    async function fetchVehiculos() {
+      const res = await fetch('/api/vehiculos');
+      if (!res.ok) {
+        alert('Error al obtener vehículos');
+        return;
+      }
+      data = await res.json();
+      if (!Array.isArray(data)) {
+        alert('La respuesta de vehículos no es un array');
+        data = [];
+      }
+      renderTable();
+      renderColumnSelector();
+    }
+
+    function renderTable(filteredData) {
+      const table = document.getElementById('vehiculos-table');
+      // Destruir DataTable antes de modificar el DOM
+      if (dataTableInstance) {
+        dataTableInstance.destroy();
+        dataTableInstance = null;
+      }
+      table.innerHTML = '';
+      if (columns.length === 0) {
+        return;
+      }
+      let header = '<thead><tr>';
+      columns.forEach(col => header += `<th>${col}</th>`);
+      header += '</tr></thead>';
+      table.innerHTML += header;
+      let rows = '<tbody>';
+      (filteredData || data).forEach(row => {
+        let tr = '<tr>';
+        columns.forEach(col => tr += `<td>${row[col] ?? ''}</td>`);
+        tr += '</tr>';
+        rows += tr;
+      });
+      rows += '</tbody>';
+      table.innerHTML += rows;
+      dataTableInstance = $('#vehiculos-table').DataTable({
+        paging: true,
+        searching: false,
+        info: true,
+        responsive: true,
+        language: {
+          info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+          lengthMenu: "Mostrar _MENU_ registros",
+          paginate: {
+            previous: "Anterior",
+            next: "Siguiente"
+          },
+          search: "Buscar:",
+          zeroRecords: "No se encontraron resultados",
+          infoEmpty: "Mostrando 0 a 0 de 0 registros",
+          infoFiltered: "(filtrado de _MAX_ registros totales)",
+          loadingRecords: "Cargando...",
+          processing: "Procesando...",
+          emptyTable: "No hay datos disponibles en la tabla"
+        }
+      });
+    }
+
+    function renderColumnSelector() {
+      const selector = document.getElementById('column-selector');
+      // Mapeo de nombres amigables y orden personalizado
+      const colNames = {
+        id: 'ID',
+        placa: 'Placa',
+        color: 'Color',
+        modelo: 'Modelo',
+        marca: 'Marca',
+        tipo: 'Tipo',
+        usuario_id_usuario: 'Usuario'
+      };
+      const order = ['id', 'placa', 'color', 'modelo', 'marca', 'tipo', 'usuario_id_usuario'];
+      selector.innerHTML = `<button type='button' class='dropdown-btn' onclick='toggleDropdown(event)'>Seleccionar columnas ▼</button>` +
+        `<div class='dropdown-content custom-dropdown'>` +
+        order.map(col => {
+          const checked = columns.includes(col) ? 'checked' : '';
+          return `<label class='dropdown-check-label'><input type='checkbox' value='${col}' ${checked} onchange='toggleCol(this)'><span>${colNames[col] || col}</span></label>`;
+        }).join('') +
+        `</div>`;
+    }
+
+    function toggleDropdown(e) {
+      e.stopPropagation();
+      const selector = document.getElementById('column-selector');
+      selector.classList.toggle('show');
+      document.addEventListener('click', closeDropdown);
+    }
+    function closeDropdown(e) {
+      const selector = document.getElementById('column-selector');
+      if (!selector.contains(e.target)) {
+        selector.classList.remove('show');
+        document.removeEventListener('click', closeDropdown);
+      }
+    }
+
+    function toggleCol(checkbox) {
+      const col = checkbox.value;
+      if (checkbox.checked) {
+        if (!columns.includes(col)) columns.push(col);
+      } else {
+        columns = columns.filter(c => c !== col);
+      }
+      renderTable();
+    }
+
+    function filterTable() {
+      const filtro = document.getElementById('filtro').value.toLowerCase();
+      const filtered = data.filter(row => columns.some(col => (row[col]+'' || '').toLowerCase().includes(filtro)));
+      renderTable(filtered);
+    }
+
+    window.onload = fetchVehiculos;
+  </script>
+</head>
+<body>
+
+<header>
+<div class="sidebar" id="sidebar">
+<div class="logo">
+<img src="img/logo-grande.png" alt="Logo Grande" class="logo-expandido">
+<img src="img/logo-mini.png" alt="Logo Miniatura" class="logo-compacto">
+</div>
+<ul>
+<li><a href="index.html"><i class="fas fa-home"></i><span class="menu-text">Inicio</span></a></li>
+<li class="submenu">
+<a href="#"><i class="fa-solid fa-list-check"></i> <span class="menu-text">Gestionar</span></a>
+<ul>
+
+<li><a href="usuarios_p.html"><i class="fa-solid fa-users-between-lines"></i><span class="menu-text">Usuarios Parqueadero</span></a></li>
+<li><a href="#"><i class="fa-solid fa-calendar-days"></i><span class="menu-text">Turnos del Operador</span></a></li>
+        
+</ul>
+</li>
+
+<li class="submenu">
+<a href="#"><i class="fa-solid fa-user-tie"></i><span class="menu-text">Administrar</span></a>
+<ul>
+
+<li><a href="crear_zonas.html"><i class="fa-solid fa-square-parking"></i><span class="menu-text">Crear Parqueaderos</span></a></li>
+<li><a href="crear_celdas.html"><i class="fa-solid fa-square-parking"></i><span class="menu-text">Crear Estacionamientos</span></a></li>  
+<li><a href="crear_usuarios.html"><i class="fa-solid fa-user-tie"></i><span class="menu-text">Usuarios del sistema </span></a></li>
+<li><a href="#"><i class="fa-solid fa-gear"></i><span class="menu-text">Configuracion</span></a></li>
+
+</ul>
+</li>
+
+<li><a href="#"><i class="fa-solid fa-headset"></i><span class="menu-text">Soporte</span></a></li>
+</ul>
+</div>
+
+<nav class="navbar">
+
+<ul class="navbar-menu">            
+<li class="dropdown">
+<a href="#" class="dropdown-toggle">Servicios</a>     
+<ul class="dropdown-menu">    
+<li><a href="#">Enlace</a></li>        
+</ul>
+</li>
+<li><a href="#">Cerrar Sesion</a></li>        
+</ul>
+</nav>
+
+</header>
+
+<main>
+<div class="contenido-principal">
+  <h1 class="centrar">Gestionar Vehículos ingresados</h1>
+  <p class="centrar">Esta tabla permite realizar búsqueda de vehículos</p>
+  <hr class="linea-windows">
+  <div style="display: flex; gap: 16px; align-items: center; margin-bottom: 12px;">
+    <div id="column-selector" class="dropdown"></div>
+    <input id="filtro" class="input-filtro" placeholder="Buscar..." oninput="filterTable()" />
+  </div>
+  <table border="1" id="vehiculos-table" class="datatable tabla-vehiculos"></table>
+</div>
+</main>
+<style>
+/* Estilo para el dropdown de selección de columnas */
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+.dropdown-btn {
+  background: #0074ff;
+  color: #fff;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 15px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  margin-bottom: 4px;
+}
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: #fff;
+  min-width: 200px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+  border-radius: 10px;
+  z-index: 1;
+  padding: 12px 16px;
+  left: 0;
+}
+.dropdown.show .dropdown-content {
+  display: block;
+}
+.dropdown-content label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 15px;
+  cursor: pointer;
+}
+.dropdown-content input[type="checkbox"] {
+  margin-right: 8px;
+}
+
+/* Mejoras visuales para el checklist del dropdown */
+.custom-dropdown {
+  padding: 10px 18px 10px 10px;
+  min-width: 170px;
+  max-width: 220px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.13);
+  border: 1px solid #e0e0e0;
+}
+.dropdown-check-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0 7px 2px;
+  border-radius: 6px;
+  transition: background 0.18s;
+  font-size: 16px;
+  cursor: pointer;
+}
+.dropdown-check-label:hover {
+  background: #f2f6ff;
+}
+.dropdown-check-label input[type="checkbox"] {
+  accent-color: #0074ff;
+  width: 18px;
+  height: 18px;
+  margin-right: 2px;
+}
+</style>
+</body>
+</html>
